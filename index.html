@@ -1,0 +1,946 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Aquidneck Island Climate Resilience Plan Dashboard | Sample Demo</title>
+<meta name="description" content="Sample interactive dashboard for tracking Aquidneck Island Climate Resilience Plan actions across Newport, Middletown, and Portsmouth." />
+<link rel="stylesheet" href="vendor/leaflet/leaflet.css" />
+<script src="vendor/leaflet/leaflet.js"></script>
+<script src="vendor/chart.umd.min.js"></script>
+<style>
+  :root {
+    --sea-900: #063447;
+    --sea-800: #0b4f6c;
+    --sea-600: #14719a;
+    --sea-400: #3aa0c8;
+    --sea-100: #e7f4fa;
+    --sand-50: #f7f4ee;
+    --sand-100: #efe8db;
+    --ink: #15202b;
+    --muted: #5a6775;
+    --line: #d5e0e8;
+    --card: #ffffff;
+    --ok: #1f7a45;
+    --ok-bg: #e6f6ec;
+    --info: #0b4f6c;
+    --info-bg: #e7f1f8;
+    --warn: #9a6700;
+    --warn-bg: #fff4df;
+    --alert: #9b2c2c;
+    --alert-bg: #fde8e8;
+    --land: #3d6b4f;
+    --water: #14719a;
+    --people: #7a4e9a;
+    --radius: 14px;
+    --shadow: 0 10px 30px rgba(11, 79, 108, 0.08);
+    --focus: #f0b429;
+  }
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body {
+    margin: 0;
+    font-family: "Segoe UI", system-ui, -apple-system, sans-serif;
+    color: var(--ink);
+    background: var(--sand-50);
+    line-height: 1.5;
+  }
+  a { color: var(--sea-800); }
+  a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible, [tabindex]:focus-visible {
+    outline: 3px solid var(--focus);
+    outline-offset: 2px;
+  }
+  .skip {
+    position: absolute; left: -9999px; top: auto;
+  }
+  .skip:focus {
+    left: 1rem; top: 1rem; z-index: 10000;
+    background: #fff; padding: 0.6rem 0.9rem; border-radius: 8px;
+    box-shadow: var(--shadow);
+  }
+  .sample-banner {
+    background: #7a3e00;
+    color: #fff;
+    text-align: center;
+    padding: 0.55rem 1rem;
+    font-size: 0.92rem;
+    font-weight: 600;
+  }
+  .sample-banner strong { font-weight: 800; }
+  header.hero {
+    background:
+      radial-gradient(circle at 85% 20%, rgba(58,160,200,0.35), transparent 40%),
+      linear-gradient(135deg, var(--sea-900), var(--sea-800) 55%, #0f6a8c);
+    color: #fff;
+    padding: 1.5rem 1.25rem 2rem;
+  }
+  .wrap { max-width: 1180px; margin: 0 auto; }
+  .brand-row {
+    display: flex; flex-wrap: wrap; gap: 0.75rem; align-items: center;
+    justify-content: space-between; margin-bottom: 1.25rem;
+  }
+  .brand {
+    display: flex; align-items: center; gap: 0.75rem;
+  }
+  .logo {
+    width: 44px; height: 44px; border-radius: 12px;
+    background: rgba(255,255,255,0.15);
+    display: grid; place-items: center; font-weight: 800;
+    border: 1px solid rgba(255,255,255,0.25);
+  }
+  .brand h1 {
+    margin: 0; font-size: 1.15rem; letter-spacing: 0.01em;
+  }
+  .brand p { margin: 0; opacity: 0.85; font-size: 0.85rem; }
+  nav.top-nav { display: flex; flex-wrap: wrap; gap: 0.4rem; }
+  nav.top-nav a {
+    color: #fff; text-decoration: none;
+    background: rgba(255,255,255,0.12);
+    border: 1px solid rgba(255,255,255,0.2);
+    padding: 0.35rem 0.7rem; border-radius: 999px; font-size: 0.85rem;
+  }
+  nav.top-nav a:hover { background: rgba(255,255,255,0.22); }
+  .hero-grid {
+    display: grid; grid-template-columns: 1.35fr 1fr; gap: 1.25rem; align-items: end;
+  }
+  @media (max-width: 900px) { .hero-grid { grid-template-columns: 1fr; } }
+  .hero h2 {
+    margin: 0 0 0.6rem; font-size: clamp(1.55rem, 3vw, 2.25rem); line-height: 1.2;
+    max-width: 18ch;
+  }
+  .hero .lede { margin: 0; max-width: 40rem; opacity: 0.93; font-size: 1.02rem; }
+  .hero-actions { display: flex; flex-wrap: wrap; gap: 0.6rem; margin-top: 1.1rem; }
+  .btn {
+    border: 0; border-radius: 999px; padding: 0.55rem 1rem;
+    font-weight: 650; cursor: pointer; font-size: 0.92rem;
+  }
+  .btn-primary { background: #fff; color: var(--sea-900); }
+  .btn-ghost { background: transparent; color: #fff; border: 1px solid rgba(255,255,255,0.45); }
+  .hero-card {
+    background: rgba(255,255,255,0.1);
+    border: 1px solid rgba(255,255,255,0.2);
+    backdrop-filter: blur(8px);
+    border-radius: var(--radius);
+    padding: 1rem 1.1rem;
+  }
+  .hero-card h3 { margin: 0 0 0.65rem; font-size: 0.95rem; opacity: 0.9; font-weight: 600; }
+  .mini-kpis { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.55rem; }
+  .mini-kpi { background: rgba(0,0,0,0.18); border-radius: 10px; padding: 0.55rem 0.6rem; }
+  .mini-kpi .v { font-size: 1.25rem; font-weight: 800; }
+  .mini-kpi .l { font-size: 0.72rem; opacity: 0.85; }
+  main { padding: 1.25rem 1.25rem 3rem; }
+  .section { margin-bottom: 1.5rem; }
+  .section-head {
+    display: flex; flex-wrap: wrap; gap: 0.75rem;
+    justify-content: space-between; align-items: end; margin-bottom: 0.85rem;
+  }
+  .section-head h2 { margin: 0; font-size: 1.25rem; }
+  .section-head p { margin: 0; color: var(--muted); font-size: 0.92rem; max-width: 42rem; }
+  .kpis {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+    gap: 0.75rem;
+  }
+  .kpi {
+    background: var(--card); border: 1px solid var(--line);
+    border-radius: var(--radius); padding: 0.95rem 1rem; box-shadow: var(--shadow);
+  }
+  .kpi .label { color: var(--muted); font-size: 0.8rem; font-weight: 600; }
+  .kpi .value { font-size: 1.7rem; font-weight: 800; margin-top: 0.15rem; color: var(--sea-800); }
+  .kpi .note { font-size: 0.78rem; color: var(--muted); margin-top: 0.25rem; }
+  .badge-real {
+    display: inline-block; margin-top: 0.35rem;
+    font-size: 0.68rem; font-weight: 700; letter-spacing: 0.03em;
+    background: var(--ok-bg); color: var(--ok); padding: 0.12rem 0.4rem; border-radius: 999px;
+  }
+  .badge-sample {
+    display: inline-block; margin-top: 0.35rem;
+    font-size: 0.68rem; font-weight: 700; letter-spacing: 0.03em;
+    background: var(--warn-bg); color: var(--warn); padding: 0.12rem 0.4rem; border-radius: 999px;
+  }
+  .grid-2 {
+    display: grid; grid-template-columns: 1.35fr 1fr; gap: 1rem;
+  }
+  @media (max-width: 960px) { .grid-2 { grid-template-columns: 1fr; } }
+  .card {
+    background: var(--card); border: 1px solid var(--line);
+    border-radius: var(--radius); padding: 1rem; box-shadow: var(--shadow);
+  }
+  .card h3 { margin: 0 0 0.75rem; font-size: 1.05rem; }
+  #map {
+    height: 420px; border-radius: 12px; border: 1px solid var(--line);
+    z-index: 1;
+  }
+  .map-tools {
+    display: flex; flex-wrap: wrap; gap: 0.45rem; margin: 0.75rem 0 0.35rem;
+  }
+  .chip {
+    border: 1px solid var(--line); background: #fff; border-radius: 999px;
+    padding: 0.28rem 0.7rem; font-size: 0.82rem; cursor: pointer;
+  }
+  .chip.active { background: var(--sea-800); color: #fff; border-color: var(--sea-800); }
+  .chip[aria-pressed="true"] { background: var(--sea-800); color: #fff; border-color: var(--sea-800); }
+  .legend {
+    display: flex; flex-wrap: wrap; gap: 0.75rem; margin-top: 0.65rem;
+    font-size: 0.8rem; color: var(--muted);
+  }
+  .legend span::before {
+    content: ""; display: inline-block; width: 10px; height: 10px;
+    border-radius: 50%; margin-right: 0.35rem; vertical-align: middle;
+  }
+  .legend .land::before { background: var(--land); }
+  .legend .water::before { background: var(--water); }
+  .legend .people::before { background: var(--people); }
+  .filters {
+    display: flex; flex-wrap: wrap; gap: 0.5rem; margin-bottom: 0.75rem; align-items: center;
+  }
+  .filters label { font-size: 0.8rem; color: var(--muted); font-weight: 600; }
+  .filters select, .filters input[type="search"] {
+    border: 1px solid var(--line); border-radius: 10px; padding: 0.4rem 0.6rem;
+    font: inherit; background: #fff; min-width: 140px;
+  }
+  .filters input[type="search"] { min-width: 200px; flex: 1; }
+  table.actions {
+    width: 100%; border-collapse: collapse; font-size: 0.9rem;
+  }
+  table.actions th, table.actions td {
+    text-align: left; padding: 0.65rem 0.45rem; border-bottom: 1px solid var(--line);
+    vertical-align: top;
+  }
+  table.actions th {
+    color: var(--muted); font-size: 0.75rem; text-transform: uppercase;
+    letter-spacing: 0.04em; font-weight: 700;
+  }
+  table.actions tbody tr {
+    cursor: pointer;
+  }
+  table.actions tbody tr:hover, table.actions tbody tr[aria-selected="true"] {
+    background: var(--sea-100);
+  }
+  .status {
+    display: inline-block; padding: 0.15rem 0.5rem; border-radius: 999px;
+    font-size: 0.75rem; font-weight: 700;
+  }
+  .status[data-s="Complete"] { background: var(--ok-bg); color: var(--ok); }
+  .status[data-s="In progress"] { background: var(--info-bg); color: var(--info); }
+  .status[data-s="Funded"] { background: #e8f7f1; color: #0f6b4c; }
+  .status[data-s="In design"] { background: #efe8fb; color: #5b3a86; }
+  .status[data-s="Needs funding"] { background: var(--warn-bg); color: var(--warn); }
+  .theme-pill {
+    display: inline-block; font-size: 0.72rem; font-weight: 700;
+    padding: 0.12rem 0.45rem; border-radius: 999px; color: #fff;
+  }
+  .theme-pill.Land { background: var(--land); }
+  .theme-pill.Water { background: var(--water); }
+  .theme-pill.People { background: var(--people); }
+  .progress {
+    height: 8px; background: #e8eef3; border-radius: 999px; overflow: hidden; margin-top: 0.35rem;
+  }
+  .progress > span { display: block; height: 100%; background: var(--sea-600); }
+  .detail {
+    border-left: 4px solid var(--sea-600);
+    background: var(--sea-100);
+    border-radius: 0 12px 12px 0;
+    padding: 0.9rem 1rem;
+    min-height: 160px;
+  }
+  .detail h4 { margin: 0 0 0.35rem; }
+  .detail dl {
+    display: grid; grid-template-columns: auto 1fr; gap: 0.25rem 0.75rem;
+    margin: 0.6rem 0 0; font-size: 0.88rem;
+  }
+  .detail dt { color: var(--muted); font-weight: 650; }
+  .detail dd { margin: 0; }
+  .charts {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;
+  }
+  @media (max-width: 800px) { .charts { grid-template-columns: 1fr; } }
+  .chart-box { position: relative; height: 260px; }
+  .story {
+    display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.85rem;
+  }
+  @media (max-width: 860px) { .story { grid-template-columns: 1fr; } }
+  .story-card {
+    background: var(--card); border: 1px solid var(--line); border-radius: var(--radius);
+    padding: 1rem; box-shadow: var(--shadow);
+  }
+  .story-card .tag {
+    font-size: 0.72rem; font-weight: 800; letter-spacing: 0.04em;
+    color: var(--sea-600); text-transform: uppercase;
+  }
+  .story-card h3 { margin: 0.35rem 0 0.45rem; font-size: 1.05rem; }
+  .story-card p { margin: 0; color: var(--muted); font-size: 0.92rem; }
+  .timeline {
+    position: relative; padding-left: 1.2rem;
+  }
+  .timeline::before {
+    content: ""; position: absolute; left: 5px; top: 0.2rem; bottom: 0.2rem;
+    width: 2px; background: var(--line);
+  }
+  .tl-item { position: relative; margin-bottom: 0.9rem; }
+  .tl-item::before {
+    content: ""; position: absolute; left: -1.2rem; top: 0.4rem;
+    width: 10px; height: 10px; border-radius: 50%;
+    background: var(--sea-600); border: 2px solid #fff; box-shadow: 0 0 0 2px var(--sea-400);
+  }
+  .tl-item .when { font-size: 0.75rem; font-weight: 700; color: var(--sea-600); }
+  .tl-item .what { font-weight: 650; }
+  .tl-item .who { font-size: 0.85rem; color: var(--muted); }
+  .staff-grid {
+    display: grid; grid-template-columns: 1.1fr 1fr; gap: 1rem;
+  }
+  @media (max-width: 860px) { .staff-grid { grid-template-columns: 1fr; } }
+  .codeish {
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: 0.78rem; background: #0f2430; color: #d7ecf5;
+    border-radius: 10px; padding: 0.85rem; overflow: auto; line-height: 1.45;
+  }
+  .steps { margin: 0; padding-left: 1.1rem; }
+  .steps li { margin-bottom: 0.45rem; }
+  .ask {
+    display: grid; grid-template-columns: 1fr auto; gap: 0.5rem;
+  }
+  .ask input {
+    border: 1px solid var(--line); border-radius: 10px; padding: 0.55rem 0.75rem; font: inherit;
+  }
+  .ask-out {
+    margin-top: 0.75rem; background: var(--sand-100); border-radius: 10px;
+    padding: 0.75rem 0.9rem; font-size: 0.92rem; min-height: 3rem;
+  }
+  .optional-tag {
+    display: inline-block; background: #efe8fb; color: #5b3a86;
+    font-size: 0.72rem; font-weight: 800; padding: 0.15rem 0.45rem; border-radius: 999px;
+    margin-left: 0.35rem; vertical-align: middle;
+  }
+  footer {
+    background: var(--sea-900); color: #d7e8f0; padding: 1.5rem 1.25rem 2rem;
+    font-size: 0.88rem;
+  }
+  footer a { color: #fff; }
+  .sr-only {
+    position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
+    overflow: hidden; clip: rect(0,0,0,0); border: 0;
+  }
+  .leaflet-container { font: inherit; }
+  .map-popup h4 { margin: 0 0 0.25rem; font-size: 0.95rem; }
+  .map-popup p { margin: 0; font-size: 0.85rem; }
+</style>
+</head>
+<body>
+<a class="skip" href="#main">Skip to main content</a>
+<div class="sample-banner" role="status">
+  <strong>SAMPLE DEMO FOR PROPOSAL</strong>  -  Built by Business Edge Analytics LLC for the Aquidneck Resilience CRP Dashboard RFP.
+  Action statuses and progress bars below are illustrative. Real CRP content will come from Cascadia Consulting Group and Aquidneck Resilience staff.
+</div>
+
+<header class="hero">
+  <div class="wrap">
+    <div class="brand-row">
+      <div class="brand">
+        <div class="logo" aria-hidden="true">AR</div>
+        <div>
+          <h1>Aquidneck Resilience</h1>
+          <p>Climate Resilience Plan Online Dashboard</p>
+        </div>
+      </div>
+      <nav class="top-nav" aria-label="Dashboard sections">
+        <a href="#overview">Overview</a>
+        <a href="#map-section">Map</a>
+        <a href="#actions">Actions</a>
+        <a href="#story">Island story</a>
+        <a href="#staff">Staff updates</a>
+        <a href="#ask">Ask the plan</a>
+      </nav>
+    </div>
+    <div class="hero-grid">
+      <div>
+        <h2>A living plan for one island</h2>
+        <p class="lede">
+          Track Climate Resilience Plan actions across Newport, Middletown, Portsmouth, and Naval Station Newport.
+          Built for the public at a glance, and for Working Group practitioners who need funding, partners, and timelines.
+        </p>
+        <div class="hero-actions">
+          <a class="btn btn-primary" href="#actions">Browse actions</a>
+          <a class="btn btn-ghost" href="#staff">See how staff update this</a>
+        </div>
+      </div>
+      <aside class="hero-card" aria-label="Island snapshot">
+        <h3>Island snapshot</h3>
+        <div class="mini-kpis">
+          <div class="mini-kpi">
+            <div class="v">60,109</div>
+            <div class="l">2020 Census residents</div>
+          </div>
+          <div class="mini-kpi">
+            <div class="v">2.98</div>
+            <div class="l">mm/yr sea level trend</div>
+          </div>
+          <div class="mini-kpi">
+            <div class="v">3</div>
+            <div class="l">themes: Land Water People</div>
+          </div>
+        </div>
+        <p style="margin:0.75rem 0 0;font-size:0.8rem;opacity:0.9;">
+          Population: U.S. Census 2020 (Newport 25,163 · Middletown 17,075 · Portsmouth 17,871).
+          Sea level: NOAA Newport tide gauge 8452660, 1930–2025 trend (±0.15 mm/yr).
+        </p>
+      </aside>
+    </div>
+  </div>
+</header>
+
+<main id="main" class="wrap">
+  <section id="overview" class="section" aria-labelledby="overview-title">
+    <div class="section-head">
+      <div>
+        <h2 id="overview-title">Plan progress at a glance</h2>
+        <p>Public facing summary first. Drill into any action for practitioner detail.</p>
+      </div>
+    </div>
+    <div class="kpis" role="list">
+      <div class="kpi" role="listitem">
+        <div class="label">Tracked actions</div>
+        <div class="value" id="kpi-total">15</div>
+        <div class="note">Tens of actions, not hundreds</div>
+        <span class="badge-sample">Sample count for demo</span>
+      </div>
+      <div class="kpi" role="listitem">
+        <div class="label">On track or complete</div>
+        <div class="value" id="kpi-ok">0</div>
+        <div class="note">Complete + In progress + Funded</div>
+        <span class="badge-sample">Sample data for demonstration</span>
+      </div>
+      <div class="kpi" role="listitem">
+        <div class="label">Needs funding</div>
+        <div class="value" id="kpi-fund">0</div>
+        <div class="note">Visible gap for partners</div>
+        <span class="badge-sample">Sample data for demonstration</span>
+      </div>
+      <div class="kpi" role="listitem">
+        <div class="label">Sea level rise (Newport)</div>
+        <div class="value">2.98</div>
+        <div class="note">mm per year, NOAA 8452660</div>
+        <span class="badge-real">Real NOAA public data</span>
+      </div>
+      <div class="kpi" role="listitem">
+        <div class="label">Working Group network</div>
+        <div class="value">70+</div>
+        <div class="note">Members · 40+ organizations</div>
+        <span class="badge-real">From Aquidneck Resilience RFP</span>
+      </div>
+    </div>
+  </section>
+
+  <section id="map-section" class="section" aria-labelledby="map-title">
+    <div class="section-head">
+      <div>
+        <h2 id="map-title">Island map and project locations</h2>
+        <p>
+          Interactive map of Aquidneck Island. In production this panel embeds your ArcGIS Online layers.
+          Markers below use publicly named projects plus clearly labeled sample actions.
+        </p>
+      </div>
+    </div>
+    <div class="grid-2">
+      <div class="card">
+        <div class="map-tools" role="group" aria-label="Map filters">
+          <button type="button" class="chip" data-map-theme="All" aria-pressed="true">All themes</button>
+          <button type="button" class="chip" data-map-theme="Land" aria-pressed="false">Land</button>
+          <button type="button" class="chip" data-map-theme="Water" aria-pressed="false">Water</button>
+          <button type="button" class="chip" data-map-theme="People" aria-pressed="false">People</button>
+          <button type="button" class="chip" id="toggle-flood" aria-pressed="false">Show sample flood overlay</button>
+        </div>
+        <div id="map" role="region" aria-label="Map of Aquidneck Island project locations"></div>
+        <div class="legend" aria-hidden="true">
+          <span class="land">Land</span>
+          <span class="water">Water</span>
+          <span class="people">People</span>
+        </div>
+        <p style="margin:0.55rem 0 0;font-size:0.8rem;color:var(--muted);">
+          Basemap: OpenStreetMap. Project pins are approximate for demonstration.
+          Flood overlay is an illustrative polygon, not an official FEMA product. Production would use your ArcGIS FEMA and sea level rise layers.
+        </p>
+      </div>
+      <div class="card">
+        <h3>Progress by theme</h3>
+        <div class="chart-box"><canvas id="themeChart" aria-label="Bar chart of actions by theme and status"></canvas></div>
+        <h3 style="margin-top:1rem;">Actions by town</h3>
+        <div class="chart-box" style="height:200px;"><canvas id="townChart" aria-label="Doughnut chart of actions by town"></canvas></div>
+        <p style="margin:0.5rem 0 0;font-size:0.8rem;color:var(--muted);">
+          Charts reflect the sample action list in this demo. Cascadia workbook columns would drive production charts.
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <section id="actions" class="section" aria-labelledby="actions-title">
+    <div class="section-head">
+      <div>
+        <h2 id="actions-title">Action tracker</h2>
+        <p>Filter by theme, town, or status. Select a row for funding, lead entity, and timeline detail.</p>
+      </div>
+    </div>
+    <div class="card">
+      <div class="filters">
+        <label for="f-theme">Theme</label>
+        <select id="f-theme">
+          <option value="All">All</option>
+          <option>Land</option>
+          <option>Water</option>
+          <option>People</option>
+        </select>
+        <label for="f-town">Town</label>
+        <select id="f-town">
+          <option value="All">All</option>
+          <option>Newport</option>
+          <option>Middletown</option>
+          <option>Portsmouth</option>
+          <option>Islandwide</option>
+        </select>
+        <label for="f-status">Status</label>
+        <select id="f-status">
+          <option value="All">All</option>
+          <option>Complete</option>
+          <option>In progress</option>
+          <option>Funded</option>
+          <option>In design</option>
+          <option>Needs funding</option>
+        </select>
+        <label for="f-search" class="sr-only">Search actions</label>
+        <input id="f-search" type="search" placeholder="Search actions, leads, funding…" autocomplete="off" />
+      </div>
+      <div class="grid-2">
+        <div style="overflow-x:auto;">
+          <table class="actions" aria-label="Climate resilience actions">
+            <thead>
+              <tr>
+                <th scope="col">Action</th>
+                <th scope="col">Theme</th>
+                <th scope="col">Town</th>
+                <th scope="col">Status</th>
+                <th scope="col">Progress</th>
+              </tr>
+            </thead>
+            <tbody id="action-body"></tbody>
+          </table>
+          <p id="action-count" style="margin:0.6rem 0 0;font-size:0.85rem;color:var(--muted);"></p>
+        </div>
+        <div>
+          <div class="detail" id="action-detail" tabindex="-1" aria-live="polite">
+            <h4>Select an action</h4>
+            <p style="margin:0;color:var(--muted);">Practitioner detail appears here: lead, funding, timeline, and summary.</p>
+          </div>
+          <p style="margin:0.65rem 0 0;font-size:0.8rem;color:var(--muted);">
+            Named infrastructure projects are drawn from public municipal and grant announcements.
+            Status percentages marked sample are illustrative for this proposal demo only.
+          </p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="section" aria-labelledby="charts-title">
+    <div class="section-head">
+      <div>
+        <h2 id="charts-title">Implementation timeline</h2>
+        <p>A simple roadmap view for public readers and partners following multi year work.</p>
+      </div>
+    </div>
+    <div class="grid-2">
+      <div class="card">
+        <h3>Sample roadmap</h3>
+        <div class="timeline" id="timeline"></div>
+        <span class="badge-sample">Sample milestones for demonstration</span>
+      </div>
+      <div class="card">
+        <h3>Status mix</h3>
+        <div class="chart-box"><canvas id="statusChart" aria-label="Pie chart of action status mix"></canvas></div>
+      </div>
+    </div>
+  </section>
+
+  <section id="story" class="section" aria-labelledby="story-title">
+    <div class="section-head">
+      <div>
+        <h2 id="story-title">Why this matters on Aquidneck Island</h2>
+        <p>Community facing story cards. Production copy would come from Cascadia narratives and your Communications team.</p>
+      </div>
+    </div>
+    <div class="story">
+      <article class="story-card">
+        <div class="tag">Land</div>
+        <h3>Protect natural buffers</h3>
+        <p>
+          Shoreline habitat, wetlands, and open space help absorb storms and protect neighborhoods.
+          Projects like Almy Pond restoration rebuild those living defenses.
+        </p>
+      </article>
+      <article class="story-card">
+        <div class="tag">Water</div>
+        <h3>Guard drinking water and coasts</h3>
+        <p>
+          Easton Ponds serve roughly 35,000 year round residents plus seasonal population and Naval Station Newport.
+          Dam and floodplain projects reduce saltwater intrusion and inland flooding risk.
+        </p>
+      </article>
+      <article class="story-card">
+        <div class="tag">People</div>
+        <h3>Plan together as one island</h3>
+        <p>
+          Water does not stop at town lines. Aquidneck Resilience connects Newport, Middletown, Portsmouth, and Naval Station Newport
+          through Working Groups and a shared Climate Resilience Plan.
+        </p>
+      </article>
+    </div>
+  </section>
+
+  <section id="staff" class="section" aria-labelledby="staff-title">
+    <div class="section-head">
+      <div>
+        <h2 id="staff-title">How Aquidneck Resilience staff update this</h2>
+        <p>
+          Designed so routine progress updates do not need a developer. Edit a spreadsheet. Publish. The dashboard refreshes.
+        </p>
+      </div>
+    </div>
+    <div class="staff-grid">
+      <div class="card">
+        <h3>Content source of truth</h3>
+        <ol class="steps">
+          <li>Cascadia and staff maintain an Excel or Google Sheet workbook (plus ArcGIS layers for maps).</li>
+          <li>Each row is one action or project: theme, town, status, lead, funding, dates, progress, summary.</li>
+          <li>Staff change a status or progress value in the sheet when a milestone moves.</li>
+          <li>A lightweight publish step rebuilds the public dashboard from that sheet. No SaaS lock in required.</li>
+          <li>Squarespace Personal Plan embeds or links the hosted dashboard. Your ArcGIS maps stay in ArcGIS.</li>
+        </ol>
+        <p style="font-size:0.88rem;color:var(--muted);">
+          This demo ships with <code>data/actions.csv</code> so evaluators can see the exact column model.
+          Production can sync from Microsoft 365 Excel, Google Sheets, or a static CSV export.
+        </p>
+      </div>
+      <div class="card">
+        <h3>Sample sheet columns</h3>
+        <pre class="codeish" tabindex="0" aria-label="Sample CSV column headers and one row">id,title,theme,town,status,lead,funding,start,end,progress,summary
+A01,Easton Pond Dam Resilience,Water,Newport,In progress,
+City of Newport Utilities,Federal and state grants,2024,2027,55,
+"Raise South Easton Pond embankment..."</pre>
+        <p style="margin:0.65rem 0 0;font-size:0.85rem;">
+          Optional later: Airtable if you want a form based editor. Base proposal keeps the spreadsheet path so Year 1 hosting stays near free.
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <section id="ask" class="section" aria-labelledby="ask-title">
+    <div class="section-head">
+      <div>
+        <h2 id="ask-title">Ask the plan <span class="optional-tag">Optional feature concept</span></h2>
+        <p>
+          A clearly labeled optional assistant that answers from published plan text only.
+          Not included in the base $24,800 fee unless you request it as an add on.
+        </p>
+      </div>
+    </div>
+    <div class="card">
+      <div class="ask">
+        <label class="sr-only" for="ask-q">Ask a question about the plan</label>
+        <input id="ask-q" type="text" placeholder="Example: Which Water projects are in Newport?" />
+        <button class="btn btn-primary" type="button" id="ask-btn">Ask</button>
+      </div>
+      <div class="ask-out" id="ask-out" role="status" aria-live="polite">
+        This is a local demo mock. It searches the sample actions on this page only. No data leaves your browser.
+      </div>
+      <p style="margin:0.65rem 0 0;font-size:0.8rem;color:var(--muted);">
+        Ethical use note: production answers would be grounded in Cascadia published content, with citations, human review for public release,
+        and no use of client data to train public models.
+      </p>
+    </div>
+  </section>
+
+  <section class="section" aria-labelledby="a11y-title">
+    <div class="card">
+      <h2 id="a11y-title" style="margin-top:0;font-size:1.1rem;">Accessibility and audiences</h2>
+      <ul>
+        <li>Section 504 oriented structure: semantic headings, keyboard operable filters and table rows, visible focus, live region for details.</li>
+        <li>Color is not the only cue: status text labels sit beside chips; charts also appear as tables of counts in the KPI row.</li>
+        <li>Mobile responsive layout tested for phone width viewing.</li>
+        <li>Public view stays simple. Practitioner detail is one click deeper, matching the RFP dual audience goal.</li>
+      </ul>
+    </div>
+  </section>
+</main>
+
+<footer>
+  <div class="wrap">
+    <p style="margin:0 0 0.4rem;"><strong>Business Edge Analytics LLC</strong> · Sample dashboard for Aquidneck Resilience CRP Dashboard RFP</p>
+    <p style="margin:0 0 0.4rem;">Contact: Jimmy Hernandez · support@businessedgeanalytics.com · (502) 709-8992</p>
+    <p style="margin:0;opacity:0.85;">
+      Real reference sources cited on screen: U.S. Census 2020; NOAA Tides and Currents station 8452660;
+      Aquidneck Resilience public project pages; municipal and grant announcements for named projects.
+      Invented progress values are labeled Sample data for demonstration.
+    </p>
+  </div>
+</footer>
+
+<script>
+/* ========== DATA ========== */
+const ACTIONS = [
+  {id:"A01",title:"Easton Pond Dam Resilience",theme:"Water",town:"Newport",status:"In progress",lead:"City of Newport Utilities",funding:"Federal and state grants",start:"2024",end:"2027",progress:55,summary:"Raise South Easton Pond embankment and armor against wave attack and saltwater intrusion. Protects the island drinking water supply serving Newport, Middletown, Portsmouth, Naval Station Newport, and wholesale customers.",lat:41.4915,lng:-71.2925,source:"Public municipal project description",sampleStatus:true},
+  {id:"A02",title:"Mill Creek Nature Based Flood Mitigation",theme:"Water",town:"Portsmouth",status:"Funded",lead:"RI DEM with partners",funding:"National Coastal Resilience Fund",start:"2024",end:"2028",progress:30,summary:"Restore Mill Creek with box culverts and nature based solutions to cut flooding and storm surge risk.",lat:41.602,lng:-71.25,source:"Public grant announcement",sampleStatus:true},
+  {id:"A03",title:"Elizabeth Brook Floodplain Restoration",theme:"Water",town:"Newport",status:"Funded",lead:"Eastern RI Conservation District",funding:"National Coastal Resilience Fund",start:"2024",end:"2027",progress:25,summary:"Restore about 1,200 linear feet of Elizabeth Brook to reduce flooding and improve coastal resilience near Naval Station Newport.",lat:41.518,lng:-71.31,source:"Public grant announcement",sampleStatus:true},
+  {id:"A04",title:"Maidford River Floodplain Restoration",theme:"Water",town:"Middletown",status:"In design",lead:"Town of Middletown",funding:"EPA technical assistance",start:"2023",end:"2027",progress:40,summary:"Restore floodplain function and improve drainage along the Maidford River to reduce flooding on Berkeley Avenue and nearby neighborhoods.",lat:41.545,lng:-71.275,source:"Public municipal reporting",sampleStatus:true},
+  {id:"A05",title:"Long Wharf Pump Station Flood Barrier",theme:"Water",town:"Newport",status:"In progress",lead:"City of Newport",funding:"Municipal capital with grants",start:"2022",end:"2026",progress:70,summary:"Install a deployable flood barrier wall to protect the Long Wharf sewer pump station from anticipated storm surge.",lat:41.4902,lng:-71.318,source:"Public municipal reporting",sampleStatus:true},
+  {id:"A06",title:"Almy Pond Shoreline Habitat Restoration",theme:"Land",town:"Newport",status:"In progress",lead:"City of Newport",funding:"RIIB grant",start:"2021",end:"2026",progress:60,summary:"Remove asphalt and restore natural shoreline habitat along Almy Pond as a coastal buffer and bird habitat.",lat:41.465,lng:-71.31,source:"Public municipal reporting",sampleStatus:true},
+  {id:"A07",title:"Common Fence Point Rain Gardens",theme:"Land",town:"Portsmouth",status:"Complete",lead:"Town of Portsmouth",funding:"RIIB grant",start:"2019",end:"2021",progress:100,summary:"Installed rain gardens, cleaned wetlands, and rehabilitated catch basins along Anthony Road to reduce flooding.",lat:41.638,lng:-71.24,source:"Public municipal reporting",sampleStatus:false},
+  {id:"A08",title:"Melville Dam Rehabilitation",theme:"Land",town:"Portsmouth",status:"Complete",lead:"Town of Portsmouth",funding:"RIIB grant",start:"2019",end:"2022",progress:100,summary:"Rehabilitated the earthen Melville Dam for stronger storm resilience.",lat:41.585,lng:-71.282,source:"Public municipal reporting",sampleStatus:false},
+  {id:"A09",title:"Islandwide Climate Resilience Plan",theme:"People",town:"Islandwide",status:"In progress",lead:"Aquidneck Resilience with Cascadia",funding:"NOAA CRRC",start:"2025",end:"2027",progress:45,summary:"Develop strategies, priority projects, and collaboration opportunities across Newport, Middletown, Portsmouth, and Naval Station Newport.",lat:41.55,lng:-71.30,source:"Aquidneck Resilience public site / RFP",sampleStatus:true},
+  {id:"A10",title:"Working Group Capacity and Engagement",theme:"People",town:"Islandwide",status:"In progress",lead:"Aquidneck Resilience",funding:"NOAA CRRC",start:"2025",end:"2028",progress:50,summary:"Support Land, Water, and People Working Groups with over 70 members from more than 40 organizations.",lat:41.56,lng:-71.305,source:"Aquidneck Resilience RFP",sampleStatus:true},
+  {id:"A11",title:"Hazard Mitigation Plan Coordination",theme:"People",town:"Islandwide",status:"Complete",lead:"Newport, Middletown, Portsmouth",funding:"Municipal",start:"2023",end:"2026",progress:100,summary:"Regional multi jurisdictional Hazard Mitigation Plan approved by all three municipal councils.",lat:41.57,lng:-71.295,source:"Aquidneck Resilience public site",sampleStatus:false},
+  {id:"A12",title:"Cooling and Extreme Heat Preparedness",theme:"People",town:"Islandwide",status:"Needs funding",lead:"Aquidneck Resilience partners",funding:"To be determined",start:"2027",end:"2029",progress:10,summary:"Identify cooling centers and heat vulnerability outreach across the island.",lat:41.535,lng:-71.288,source:"Illustrative sample action",sampleStatus:true,pureSample:true},
+  {id:"A13",title:"Coastal Marsh Migration Corridors",theme:"Land",town:"Islandwide",status:"In design",lead:"Conservation partners",funding:"To be determined",start:"2027",end:"2030",progress:15,summary:"Map and protect corridors for marsh migration under sea level rise.",lat:41.52,lng:-71.265,source:"Illustrative sample action",sampleStatus:true,pureSample:true},
+  {id:"A14",title:"Stormwater Green Infrastructure Pilot",theme:"Water",town:"Middletown",status:"Needs funding",lead:"Town of Middletown",funding:"To be determined",start:"2027",end:"2029",progress:5,summary:"Pilot green infrastructure in flood prone neighborhoods.",lat:41.53,lng:-71.29,source:"Illustrative sample action",sampleStatus:true,pureSample:true},
+  {id:"A15",title:"Resilience Financing Strategy Updates",theme:"People",town:"Islandwide",status:"In design",lead:"Aquidneck Resilience",funding:"NOAA CRRC",start:"2026",end:"2028",progress:20,summary:"Refresh municipal financing strategies for priority projects.",lat:41.545,lng:-71.315,source:"Illustrative sample action",sampleStatus:true,pureSample:true}
+];
+
+const THEME_COLOR = { Land: "#3d6b4f", Water: "#14719a", People: "#7a4e9a" };
+
+/* ========== KPIs ========== */
+function refreshKpis(list) {
+  const total = list.length;
+  const ok = list.filter(a => ["Complete","In progress","Funded"].includes(a.status)).length;
+  const fund = list.filter(a => a.status === "Needs funding").length;
+  document.getElementById("kpi-total").textContent = total;
+  document.getElementById("kpi-ok").textContent = ok;
+  document.getElementById("kpi-fund").textContent = fund;
+}
+
+/* ========== TABLE ========== */
+let selectedId = "A01";
+function filteredActions() {
+  const theme = document.getElementById("f-theme").value;
+  const town = document.getElementById("f-town").value;
+  const status = document.getElementById("f-status").value;
+  const q = document.getElementById("f-search").value.trim().toLowerCase();
+  return ACTIONS.filter(a => {
+    if (theme !== "All" && a.theme !== theme) return false;
+    if (town !== "All" && a.town !== town) return false;
+    if (status !== "All" && a.status !== status) return false;
+    if (q) {
+      const hay = [a.title,a.lead,a.funding,a.summary,a.town,a.theme,a.status].join(" ").toLowerCase();
+      if (!hay.includes(q)) return false;
+    }
+    return true;
+  });
+}
+
+function renderTable() {
+  const list = filteredActions();
+  const body = document.getElementById("action-body");
+  body.innerHTML = "";
+  list.forEach(a => {
+    const tr = document.createElement("tr");
+    tr.tabIndex = 0;
+    tr.setAttribute("role", "button");
+    tr.setAttribute("aria-selected", a.id === selectedId ? "true" : "false");
+    tr.dataset.id = a.id;
+    tr.innerHTML = `
+      <td><strong>${a.title}</strong><div style="font-size:0.78rem;color:var(--muted)">${a.id}${a.pureSample ? " · illustrative sample" : ""}</div></td>
+      <td><span class="theme-pill ${a.theme}">${a.theme}</span></td>
+      <td>${a.town}</td>
+      <td><span class="status" data-s="${a.status}">${a.status}</span></td>
+      <td style="min-width:110px">${a.progress}%
+        <div class="progress" aria-hidden="true"><span style="width:${a.progress}%"></span></div>
+      </td>`;
+    tr.addEventListener("click", () => selectAction(a.id));
+    tr.addEventListener("keydown", (e) => {
+      if (e.key === "Enter" || e.key === " ") { e.preventDefault(); selectAction(a.id); }
+    });
+    body.appendChild(tr);
+  });
+  document.getElementById("action-count").textContent = `Showing ${list.length} of ${ACTIONS.length} actions`;
+  if (!list.find(a => a.id === selectedId) && list[0]) selectedId = list[0].id;
+  renderDetail();
+}
+
+function selectAction(id) {
+  selectedId = id;
+  renderTable();
+  document.getElementById("action-detail").focus({ preventScroll: true });
+}
+
+function renderDetail() {
+  const a = ACTIONS.find(x => x.id === selectedId);
+  const el = document.getElementById("action-detail");
+  if (!a) { el.innerHTML = "<h4>No action selected</h4>"; return; }
+  el.innerHTML = `
+    <h4>${a.title}</h4>
+    <p style="margin:0 0 0.35rem">${a.summary}</p>
+    <dl>
+      <dt>Theme</dt><dd>${a.theme}</dd>
+      <dt>Town</dt><dd>${a.town}</dd>
+      <dt>Status</dt><dd>${a.status}${a.sampleStatus ? " (sample progress for demo)" : ""}</dd>
+      <dt>Lead</dt><dd>${a.lead}</dd>
+      <dt>Funding</dt><dd>${a.funding}</dd>
+      <dt>Timeline</dt><dd>${a.start} to ${a.end}</dd>
+      <dt>Progress</dt><dd>${a.progress}%</dd>
+      <dt>Source note</dt><dd>${a.source}</dd>
+    </dl>`;
+}
+
+["f-theme","f-town","f-status","f-search"].forEach(id => {
+  document.getElementById(id).addEventListener("input", renderTable);
+  document.getElementById(id).addEventListener("change", renderTable);
+});
+
+/* ========== MAP ========== */
+const map = L.map("map", { scrollWheelZoom: false }).setView([41.55, -71.30], 11);
+L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+  maxZoom: 18,
+  attribution: "&copy; OpenStreetMap"
+}).addTo(map);
+
+const islandOutline = L.polygon([
+  [41.675, -71.268], [41.66, -71.22], [41.62, -71.20], [41.55, -71.21],
+  [41.48, -71.25], [41.45, -71.30], [41.45, -71.35], [41.48, -71.36],
+  [41.52, -71.34], [41.58, -71.33], [41.64, -71.30], [41.675, -71.268]
+], {
+  color: "#0b4f6c", weight: 2, fillColor: "#3aa0c8", fillOpacity: 0.08,
+  interactive: false
+}).addTo(map);
+
+const floodLayer = L.polygon([
+  [41.50, -71.33], [41.495, -71.30], [41.48, -71.29], [41.47, -71.31],
+  [41.475, -71.34], [41.49, -71.345]
+], {
+  color: "#9b2c2c", weight: 1, fillColor: "#e53e3e", fillOpacity: 0.25,
+  interactive: false
+});
+floodLayer.bindTooltip("Sample flood overlay (illustrative, not FEMA)", { sticky: true });
+
+const markers = [];
+function themeIcon(theme) {
+  const color = THEME_COLOR[theme] || "#0b4f6c";
+  return L.divIcon({
+    className: "",
+    html: `<div style="width:16px;height:16px;border-radius:50%;background:${color};border:2px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,.35)"></div>`,
+    iconSize: [16,16], iconAnchor: [8,8]
+  });
+}
+
+let mapTheme = "All";
+function renderMarkers() {
+  markers.forEach(m => map.removeLayer(m));
+  markers.length = 0;
+  ACTIONS.forEach(a => {
+    if (mapTheme !== "All" && a.theme !== mapTheme) return;
+    const m = L.marker([a.lat, a.lng], { icon: themeIcon(a.theme), title: a.title })
+      .addTo(map)
+      .bindPopup(`<div class="map-popup"><h4>${a.title}</h4><p>${a.town} · ${a.theme} · ${a.status}</p></div>`);
+    m.on("click", () => selectAction(a.id));
+    markers.push(m);
+  });
+}
+renderMarkers();
+
+document.querySelectorAll("[data-map-theme]").forEach(btn => {
+  btn.addEventListener("click", () => {
+    mapTheme = btn.getAttribute("data-map-theme");
+    document.querySelectorAll("[data-map-theme]").forEach(b => b.setAttribute("aria-pressed", b === btn ? "true" : "false"));
+    renderMarkers();
+  });
+});
+document.getElementById("toggle-flood").addEventListener("click", () => {
+  const btn = document.getElementById("toggle-flood");
+  const on = btn.getAttribute("aria-pressed") === "true";
+  if (on) { map.removeLayer(floodLayer); btn.setAttribute("aria-pressed", "false"); }
+  else { floodLayer.addTo(map); btn.setAttribute("aria-pressed", "true"); }
+});
+
+/* ========== CHARTS ========== */
+function buildCharts() {
+  const themes = ["Land","Water","People"];
+  const statuses = ["Complete","In progress","Funded","In design","Needs funding"];
+  const themeCounts = themes.map(t => ACTIONS.filter(a => a.theme === t).length);
+  const townLabels = ["Newport","Middletown","Portsmouth","Islandwide"];
+  const townCounts = townLabels.map(t => ACTIONS.filter(a => a.town === t).length);
+  const statusCounts = statuses.map(s => ACTIONS.filter(a => a.status === s).length);
+
+  new Chart(document.getElementById("themeChart"), {
+    type: "bar",
+    data: {
+      labels: themes,
+      datasets: [{
+        label: "Actions",
+        data: themeCounts,
+        backgroundColor: themes.map(t => THEME_COLOR[t]),
+        borderRadius: 8
+      }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { display: false }, title: { display: false } },
+      scales: { y: { beginAtZero: true, ticks: { precision: 0 } } }
+    }
+  });
+
+  new Chart(document.getElementById("townChart"), {
+    type: "doughnut",
+    data: {
+      labels: townLabels,
+      datasets: [{ data: townCounts, backgroundColor: ["#0b4f6c","#14719a","#3aa0c8","#7a4e9a"] }]
+    },
+    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: "bottom" } } }
+  });
+
+  new Chart(document.getElementById("statusChart"), {
+    type: "pie",
+    data: {
+      labels: statuses,
+      datasets: [{ data: statusCounts, backgroundColor: ["#1f7a45","#0b4f6c","#0f6b4c","#7a4e9a","#b7791f"] }]
+    },
+    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: "bottom" } } }
+  });
+}
+
+/* ========== TIMELINE ========== */
+const MILESTONES = [
+  { when: "2019–2022", what: "Early municipal resilience projects", who: "Rain gardens, Melville Dam, shoreline starts" },
+  { when: "2023–2026", what: "Regional Hazard Mitigation Plan", who: "Approved by Newport, Middletown, Portsmouth councils" },
+  { when: "Fall 2025 – Summer 2027", what: "Climate Resilience Plan with Cascadia", who: "Strategies, priority projects, Working Groups" },
+  { when: "Jan – Jul 2027", what: "Online dashboard build (this RFP)", who: "Public tracker handed to Aquidneck Resilience staff" },
+  { when: "Through Fall 2028", what: "NOAA CRRC grant period", who: "Implementation support toward a lasting program" }
+];
+document.getElementById("timeline").innerHTML = MILESTONES.map(m => `
+  <div class="tl-item">
+    <div class="when">${m.when}</div>
+    <div class="what">${m.what}</div>
+    <div class="who">${m.who}</div>
+  </div>`).join("");
+
+/* ========== ASK MOCK ========== */
+document.getElementById("ask-btn").addEventListener("click", () => {
+  const q = document.getElementById("ask-q").value.trim().toLowerCase();
+  const out = document.getElementById("ask-out");
+  if (!q) { out.textContent = "Type a question about the sample actions on this page."; return; }
+  const hits = ACTIONS.filter(a => {
+    const hay = [a.title,a.theme,a.town,a.status,a.summary,a.funding].join(" ").toLowerCase();
+    return q.split(/\s+/).some(w => w.length > 2 && hay.includes(w));
+  }).slice(0, 4);
+  if (!hits.length) {
+    out.innerHTML = "No matching sample actions found. Try words like Water, Newport, funding, or dam.";
+    return;
+  }
+  out.innerHTML = `<strong>Demo answer from sample actions only:</strong><ul style="margin:0.4rem 0 0;padding-left:1.1rem">` +
+    hits.map(a => `<li><strong>${a.title}</strong> (${a.town}, ${a.theme}) · ${a.status}</li>`).join("") +
+    `</ul>`;
+});
+
+/* ========== INIT ========== */
+refreshKpis(ACTIONS);
+renderTable();
+buildCharts();
+setTimeout(() => map.invalidateSize(), 200);
+window.addEventListener("resize", () => map.invalidateSize());
+</script>
+</body>
+</html>
